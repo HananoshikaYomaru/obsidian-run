@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "dv-generator",
+	"name": "Dataview generator",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "This is a sample plugin for Obsidian. This plugin demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "Generate markdown from dataview query and javascript",
+	"author": "Hananoshika Yomaru",
+	"authorUrl": "https://yomaru.dev",
+	"fundingUrl": "https://www.buymeacoffee.com/yomaru",
 	"isDesktopOnly": false
 }
