@@ -1,21 +1,11 @@
-import {
-	Editor,
-	EventRef,
-	MarkdownView,
-	Plugin,
-	TFile,
-	request,
-} from "obsidian";
+import { Editor, EventRef, MarkdownView, Plugin, TFile } from "obsidian";
 import { DataviewApi, getAPI } from "obsidian-dataview";
-import {
-	Data,
-	getDataFromFile,
-	getDataFromTextSync,
-	writeFile,
-} from "./utils/obsidian";
+import { Data, getDataFromTextSync, writeFile } from "./utils/obsidian";
 import { extractSectionsFromPattern } from "./extractTextFromPattern";
 import { evalFromExpression } from "./utils/evalFromExpression";
 import { getNewTextFromResults } from "./getNewTextFromResults";
+import dedent from "ts-dedent";
+import { createNotice } from "./createNotice";
 
 enum YamlKey {
 	IGNORE = "dv-gen-ignore",
@@ -45,9 +35,7 @@ function isFileIgnored(file: TFile, data?: Data) {
 }
 
 export default class DvGeneratorPlugin extends Plugin {
-	private eventRefs: EventRef[] = [];
 	private previousSaveCommand: () => void;
-	private dv: DataviewApi | undefined;
 
 	runFileSync(file: TFile, editor: Editor) {
 		const data = getDataFromTextSync(editor.getValue());
@@ -62,27 +50,32 @@ export default class DvGeneratorPlugin extends Plugin {
 				properties: data.yamlObj,
 			},
 			dv: getAPI(this.app),
-			_Function: Function,
 		};
 
-		// this.dv?.markdownList
 		const results = sections.map(({ startingTag, codeBlock }) => {
 			return evalFromExpression(
-				codeBlock
-					? `_Function(
-					"dv",
-					"file",
-					\`
-					${codeBlock?.code}
-				  \`
-				  )`
-					: startingTag,
+				codeBlock ? codeBlock.code : startingTag,
+				codeBlock ? true : false,
 				context
 			);
 		});
 
-		const { resultedText: newText, remainingPromises } =
-			getNewTextFromResults(data, results, sections, context);
+		const {
+			resultedText: newText,
+			remainingPromises,
+			errors,
+		} = getNewTextFromResults(data, results, sections);
+
+		createNotice(
+			dedent`
+		Completed: ${
+			results.length - errors.length - remainingPromises.length
+		} out of ${results.length}
+		Promise: ${remainingPromises.length}
+		Error: ${errors.length}
+		`,
+			errors.length > 0 ? "red" : "white"
+		);
 
 		// if new text, write File
 		if (newText !== data.text) {
@@ -92,17 +85,23 @@ export default class DvGeneratorPlugin extends Plugin {
 		// for each remaining promise, update the text when it resolves
 		remainingPromises.forEach(({ section, promise }) => {
 			// the result should be a string
-			promise.then((result) => {
-				console.log(result, section);
-				const data = getDataFromTextSync(editor.getValue());
-				const { resultedText } = getNewTextFromResults(
-					data,
-					[{ success: true, result }],
-					[section],
-					context
-				);
-				writeFile(editor, data.text, resultedText);
-			});
+			promise
+				.then((result) => {
+					const data = getDataFromTextSync(editor.getValue());
+					const { resultedText } = getNewTextFromResults(
+						data,
+						[{ success: true, result }],
+						[section]
+					);
+					writeFile(editor, data.text, resultedText);
+				})
+				.catch((e) => {
+					console.error(e);
+					createNotice(
+						`Error when resolving run ${section.id}: ${e.message}`,
+						"red"
+					);
+				});
 		});
 	}
 
@@ -125,11 +124,6 @@ export default class DvGeneratorPlugin extends Plugin {
 
 				// this cannot be awaited because it will cause the editor to delay saving
 				this.runFileSync(file, editor);
-				// const newText = data.text + "Loading...";
-				// writeFile(editor, data.text, data.text + "Loading...");
-				// request("https://www.google.com").then((text) => {
-				// writeFile(editor, newText, data.text + text);
-				// });
 
 				// run the previous save command
 				this.previousSaveCommand();
@@ -145,7 +139,6 @@ export default class DvGeneratorPlugin extends Plugin {
 	}
 
 	async onload() {
-		this.dv = getAPI(this.app);
 		this.registerEventsAndSaveCallback();
 	}
 

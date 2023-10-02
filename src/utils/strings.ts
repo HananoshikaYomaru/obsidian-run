@@ -450,3 +450,24 @@ export function isNumeric(str: string) {
 export function stripCr(text: string) {
 	return text.replace(/\r/g, "");
 }
+
+/**
+ * This function takes in a string and returns an object with key value pairs
+ */
+export function mapStringToKeyValuePairs(inputString: string) {
+	const lines = inputString.split("\n");
+	const result: {
+		[x: string]: string;
+	} = {};
+
+	lines.forEach((line) => {
+		const index = line.indexOf(":");
+		if (index !== -1) {
+			const key = line.slice(0, index).trim();
+			const value = line.slice(index + 1).trim();
+			if (key && value) result[key] = value;
+		}
+	});
+
+	return result;
+}

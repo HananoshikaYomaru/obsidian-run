@@ -1,44 +1,36 @@
 import { Data } from "./utils/obsidian";
 import { Section } from "./extractTextFromPattern";
-import { EvalResult, SanitizedObjectResult } from "./utils/evalFromExpression";
+import {
+	EvalResult,
+	SanitizedObjectResult,
+	Schema,
+} from "./utils/evalFromExpression";
 import dedent from "ts-dedent";
 import { format } from "date-fns";
 import { getEndingTag } from "./main";
-
-function getContentFromResult(result: SanitizedObjectResult, context: any) {
-	if (typeof result === "function") {
-		// @ts-ignore
-		const temp = result(context.dv, context.file);
-		// const temp = result();
-		// check if it is a promise
-		return temp;
-	} else {
-		return result;
-	}
-}
+import { createNotice } from "./createNotice";
 
 export function getNewTextFromResults(
 	data: Data,
 	results: EvalResult[],
-	sections: Section[],
-	context: any
+	sections: Section[]
 ) {
 	let resultedText = data.text;
-	const remainingPromises: { section: Section; promise: Promise<any> }[] = [];
+
+	const remainingPromises: { section: Section; promise: Promise<Schema> }[] =
+		[];
+	const errors: { section: Section; message: string }[] = [];
 
 	for (let i = 0; i < results.length; i++) {
 		const result = results[i]!;
 		const section = sections[i]!;
 		// for each success result, remove all the texts to corresponding end tag and replace it with the result
 		if (result.success) {
-			const execResult = getContentFromResult(result.result, context);
-
 			const content =
-				execResult instanceof Promise ? "Loading..." : execResult;
+				result.result instanceof Promise ? "Loading..." : result.result;
 
-			console.log(content, section.text);
 			const newSectionText = dedent`
-			%% dv-gen start 
+			%% dv-gen start ${section.id}
 			${section.startingTag} 
 			%%
 			${content}
@@ -51,14 +43,15 @@ export function getNewTextFromResults(
 			)}
 			%%
 			`;
+
 			resultedText = resultedText.replace(section.text, newSectionText);
-			if (execResult instanceof Promise) {
+			if (result.result instanceof Promise) {
 				remainingPromises.push({
 					section: {
 						...section,
 						text: newSectionText,
 					},
-					promise: execResult,
+					promise: result.result,
 				});
 			}
 		}
@@ -68,7 +61,7 @@ export function getNewTextFromResults(
 			resultedText = resultedText.replace(
 				section.text,
 				dedent`
-			%% dv-gen start
+			%% dv-gen start ${section.id}
 			${section.startingTag}
 			%%
 			${"content" in section ? section.content : ""}
@@ -79,7 +72,12 @@ export function getNewTextFromResults(
 			%%
 			`
 			);
+			errors.push({
+				section,
+				message: result.error.message,
+			});
 		}
 	}
-	return { resultedText, remainingPromises };
+
+	return { resultedText, remainingPromises, errors };
 }

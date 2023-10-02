@@ -1,5 +1,4 @@
-import { TFile } from "obsidian";
-import safeEval from "safe-eval";
+import dedent from "ts-dedent";
 import { z } from "zod";
 
 const primativeSchema = z
@@ -11,31 +10,15 @@ const primativeSchema = z
 	.or(z.undefined())
 	.or(z.null());
 
-// const recursivePrmitiveSchema: z.ZodType<any> = z.lazy(() =>
-// 	z.record(
-// 		z.union([
-// 			primativeSchema,
-// 			recursivePrmitiveSchema,
-// 			z.array(
-// 				primativeSchema
-// 					.or(recursivePrmitiveSchema)
-// 					.or(z.array(primativeSchema))
-// 			),
-// 		])
-// 	)
-// );
-
-type Schema = z.infer<typeof primativeSchema>;
+export type Schema = z.infer<typeof primativeSchema>;
 
 export type SanitizedObject = Schema;
 
-export type SanitizedObjectResult =
-	| (() => Schema | Promise<Schema>)
-	| Schema
-	| Promise<Schema>;
+export type SanitizedObjectResult = Schema | Promise<Schema>;
 
 export function evalFromExpression(
 	expression: string,
+	isFunctionBody: boolean,
 	context: {
 		[x: string]: any;
 	}
@@ -53,7 +36,16 @@ export function evalFromExpression(
 			result: SanitizedObjectResult;
 	  } {
 	try {
-		const result = safeEval(expression, context);
+		const func = new Function(
+			...Object.keys(context).sort(),
+			dedent(!isFunctionBody ? `return ${expression}` : expression)
+		);
+
+		const result = func(
+			...Object.keys(context)
+				.sort()
+				.map((key) => context[key])
+		) as SanitizedObjectResult;
 
 		// for each value in object, make sure it pass the schema, if not, assign error message to the key in sanitizedObject
 		// const sanitizedResult: SanitizedObject = primativeSchema.parse(object);
