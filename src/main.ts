@@ -1,4 +1,11 @@
-import { Editor, EventRef, MarkdownView, Plugin, TFile } from "obsidian";
+import {
+	Editor,
+	EventRef,
+	MarkdownView,
+	Plugin,
+	TFile,
+	request,
+} from "obsidian";
 import { DataviewApi, getAPI } from "obsidian-dataview";
 import {
 	Data,
@@ -6,24 +13,15 @@ import {
 	getDataFromTextSync,
 	writeFile,
 } from "./utils/obsidian";
-import { Section, extractSectionsFromPattern } from "./extractTextFromPattern";
-import { EvalResult, evalFromExpression } from "./utils/evalFromExpression";
-import dedent from "ts-dedent";
-
-const formatter = new Intl.DateTimeFormat("en", {
-	year: "numeric",
-	month: "2-digit",
-	day: "2-digit",
-	hour: "2-digit",
-	minute: "2-digit",
-	second: "2-digit",
-});
+import { extractSectionsFromPattern } from "./extractTextFromPattern";
+import { evalFromExpression } from "./utils/evalFromExpression";
+import { getNewTextFromResults } from "./getNewTextFromResults";
 
 enum YamlKey {
 	IGNORE = "dv-gen-ignore",
 }
 
-const getEndingTag = (
+export const getEndingTag = (
 	endingObject: { [x: string]: string },
 	newObject: { [x: string]: string }
 ) => {
@@ -38,67 +36,6 @@ const getEndingTag = (
 		.join("\n");
 	return string;
 };
-
-const injectStringByIndex = (str: string, index: number, inject: string) => {
-	return str.slice(0, index) + inject + str.slice(index);
-};
-
-const removeSubstringByIndices = (str: string, start: number, end: number) => {
-	return str.slice(0, start) + str.slice(end);
-};
-
-function getNewTextFromResults(
-	data: Data,
-	results: EvalResult[],
-	sections: Section[]
-) {
-	let resultedText = data.text;
-
-	for (let i = 0; i < results.length; i++) {
-		const result = results[i]!;
-		const section = sections[i]!;
-		// for each success result, remove all the texts the corresponding end tag and replace it with the result
-		if (result.success) {
-			// console.log(section.text);
-			// inject the result string to the text
-			resultedText = resultedText.replace(
-				section.text,
-				dedent`
-			%% dv-gen start 
-			${section.startingTag} 
-			%%
-			${result.result}
-			%% dv-gen end 
-			${getEndingTag(
-				{},
-				{
-					"last update": formatter.format(new Date()),
-				}
-			)}
-			%%
-			`
-			);
-		}
-		// for each failed result, don't change anything between the start and end tag, but update the ending tag meta to include the error message
-		else {
-			resultedText = resultedText.replace(
-				section.text,
-				dedent`
-			%% dv-gen start
-			${section.startingTag}
-			%%
-			${"content" in section ? section.content : ""}
-			%% dv-gen end
-			${getEndingTag("endingTag" in section ? section.endingObject : {}, {
-				error: result.error.message,
-			})}
-			%%
-			`
-			);
-		}
-	}
-	return resultedText;
-}
 
 function isFileIgnored(file: TFile, data?: Data) {
 	if (data) {
@@ -119,27 +56,54 @@ export default class DvGeneratorPlugin extends Plugin {
 		const sections = extractSectionsFromPattern(data.text);
 		// eval all the expressions
 
+		const context = {
+			file: {
+				...file,
+				properties: data.yamlObj,
+			},
+			dv: getAPI(this.app),
+			_Function: Function,
+		};
+
+		// this.dv?.markdownList
 		const results = sections.map(({ startingTag, codeBlock }) => {
 			return evalFromExpression(
-				codeBlock ? codeBlock.code : startingTag,
-				{
-					file: {
-						...file,
-						properties: data.yamlObj,
-					},
-					dv: getAPI(this.app),
-				}
+				codeBlock
+					? `_Function(
+					"dv",
+					"file",
+					\`
+					${codeBlock?.code}
+				  \`
+				  )`
+					: startingTag,
+				context
 			);
 		});
 
-		const newText = getNewTextFromResults(data, results, sections);
-		console.log(newText);
-		// compose new text
+		const { resultedText: newText, remainingPromises } =
+			getNewTextFromResults(data, results, sections, context);
 
 		// if new text, write File
-		if (newText) {
+		if (newText !== data.text) {
 			writeFile(editor, data.text, newText);
 		}
+
+		// for each remaining promise, update the text when it resolves
+		remainingPromises.forEach(({ section, promise }) => {
+			// the result should be a string
+			promise.then((result) => {
+				console.log(result, section);
+				const data = getDataFromTextSync(editor.getValue());
+				const { resultedText } = getNewTextFromResults(
+					data,
+					[{ success: true, result }],
+					[section],
+					context
+				);
+				writeFile(editor, data.text, resultedText);
+			});
+		});
 	}
 
 	registerEventsAndSaveCallback() {
@@ -148,7 +112,7 @@ export default class DvGeneratorPlugin extends Plugin {
 		this.previousSaveCommand = saveCommandDefinition.callback;
 
 		if (typeof this.previousSaveCommand === "function") {
-			saveCommandDefinition.callback = async () => {
+			saveCommandDefinition.callback = () => {
 				// get the editor and file
 				const editor =
 					this.app.workspace.getActiveViewOfType(
@@ -156,11 +120,16 @@ export default class DvGeneratorPlugin extends Plugin {
 					)?.editor;
 				const file = this.app.workspace.getActiveFile();
 				if (!editor || !file) return;
-				const data = await getDataFromFile(this, file);
+				const data = getDataFromTextSync(editor.getValue());
 				if (isFileIgnored(file, data)) return;
 
 				// this cannot be awaited because it will cause the editor to delay saving
 				this.runFileSync(file, editor);
+				// const newText = data.text + "Loading...";
+				// writeFile(editor, data.text, data.text + "Loading...");
+				// request("https://www.google.com").then((text) => {
+				// writeFile(editor, newText, data.text + text);
+				// });
 
 				// run the previous save command
 				this.previousSaveCommand();

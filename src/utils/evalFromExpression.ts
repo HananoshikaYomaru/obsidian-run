@@ -29,6 +29,11 @@ type Schema = z.infer<typeof primativeSchema>;
 
 export type SanitizedObject = Schema;
 
+export type SanitizedObjectResult =
+	| (() => Schema | Promise<Schema>)
+	| Schema
+	| Promise<Schema>;
+
 export function evalFromExpression(
 	expression: string,
 	context: {
@@ -42,9 +47,13 @@ export function evalFromExpression(
 				message: string;
 			};
 	  }
-	| { success: true; result: string } {
+	// can be a function, a function to return promise, a promise or a primative
+	| {
+			success: true;
+			result: SanitizedObjectResult;
+	  } {
 	try {
-		const result = String(safeEval(expression, context));
+		const result = safeEval(expression, context);
 
 		// for each value in object, make sure it pass the schema, if not, assign error message to the key in sanitizedObject
 		// const sanitizedResult: SanitizedObject = primativeSchema.parse(object);
@@ -55,12 +64,12 @@ export function evalFromExpression(
 		} as const;
 	} catch (e) {
 		return {
-			success: false as const,
+			success: false,
 			error: {
 				cause: e as Error,
 				message: e.message as string,
 			},
-		};
+		} as const;
 	}
 }
 
