@@ -50,7 +50,7 @@ export enum MDAstTypes {
 	InlineMath = "inlineMath",
 }
 
-function parseTextToAST(text: string): Root {
+export function parseTextToAST(text: string): Root {
 	const textHash = hashString53Bit(text);
 	if (LRU.has(textHash)) {
 		return LRU.get(textHash) as Root;

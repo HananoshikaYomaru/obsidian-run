@@ -1,16 +1,20 @@
+import { Code } from "mdast-util-from-markdown/lib";
 import { Prettify } from "./typings/prettify";
+import { parseTextToAST } from "./utils/mdast";
 import { mapStringToKeyValuePairs } from "./utils/strings";
 
 const startPattern = /%% run start\s*([\s\S]*?)%%/g;
-const codeBlockPattern = /```(ts|js)\n([\s\S]*?)\n```/;
+const codeBlockPattern = /```(\s*)?(ts|js)(\s*)?\n([\s\S]*?)\n```/;
 const endPattern = /%% run end\s*([\s\S]*?)%%/g;
 
 export const extractCode = (text: string) => {
 	const matches = new RegExp(codeBlockPattern).exec(text);
-	if (matches && matches.length === 3) {
+	if (matches) {
+		const ast = parseTextToAST(matches[0]);
+		const code = ast.children.find((c) => c.type === "code")! as Code;
 		return {
-			languageCode: matches[1]!,
-			code: matches[2]!,
+			languageCode: code.lang ?? "js",
+			code: code.value,
 		};
 	}
 	return undefined;

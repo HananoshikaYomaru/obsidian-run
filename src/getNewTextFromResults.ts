@@ -96,6 +96,7 @@ export function getNewTextFromResults(
 
 		// for each failed result, don't change anything between the start and end tag, but update the ending tag meta to include the error message
 		else {
+			console.error(result.error.message);
 			const newSectionText = dedent`
 			%% run start ${section.id}
 			${section.startingTag}
