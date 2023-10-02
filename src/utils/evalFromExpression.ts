@@ -10,11 +10,7 @@ const primativeSchema = z
 	.or(z.undefined())
 	.or(z.null());
 
-export type Schema = z.infer<typeof primativeSchema>;
-
-export type SanitizedObject = Schema;
-
-export type SanitizedObjectResult = Schema | Promise<Schema>;
+export type Primitive = z.infer<typeof primativeSchema>;
 
 export function evalFromExpression(
 	expression: string,
@@ -33,7 +29,7 @@ export function evalFromExpression(
 	// can be a function, a function to return promise, a promise or a primative
 	| {
 			success: true;
-			result: SanitizedObjectResult;
+			result: Primitive | Promise<Primitive>;
 	  } {
 	try {
 		const func = new Function(
@@ -45,7 +41,7 @@ export function evalFromExpression(
 			...Object.keys(context)
 				.sort()
 				.map((key) => context[key])
-		) as SanitizedObjectResult;
+		) as Primitive | Promise<Primitive>;
 
 		// for each value in object, make sure it pass the schema, if not, assign error message to the key in sanitizedObject
 		// const sanitizedResult: SanitizedObject = primativeSchema.parse(object);

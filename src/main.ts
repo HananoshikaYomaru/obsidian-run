@@ -1,31 +1,16 @@
-import { Editor, EventRef, MarkdownView, Plugin, TFile } from "obsidian";
-import { DataviewApi, getAPI } from "obsidian-dataview";
+import { Editor, MarkdownView, Plugin, TFile } from "obsidian";
+import { getAPI } from "obsidian-dataview";
 import { Data, getDataFromTextSync, writeFile } from "./utils/obsidian";
 import { extractSectionsFromPattern } from "./extractTextFromPattern";
 import { evalFromExpression } from "./utils/evalFromExpression";
 import { getNewTextFromResults } from "./getNewTextFromResults";
 import dedent from "ts-dedent";
 import { createNotice } from "./createNotice";
+import { SettingTab } from "./ui/settingsTab";
 
 enum YamlKey {
-	IGNORE = "dv-gen-ignore",
+	IGNORE = "run-ignore",
 }
-
-export const getEndingTag = (
-	endingObject: { [x: string]: string },
-	newObject: { [x: string]: string }
-) => {
-	const test = {
-		...endingObject,
-		...newObject,
-	};
-
-	// convert the object to string
-	const string = Object.entries(test)
-		.map(([key, value]) => `${key}: ${value}`)
-		.join("\n");
-	return string;
-};
 
 function isFileIgnored(file: TFile, data?: Data) {
 	if (data) {
@@ -34,7 +19,16 @@ function isFileIgnored(file: TFile, data?: Data) {
 	return false;
 }
 
+export type DvGeneratorPluginSettings = {
+	generateEndingTagMetadata: boolean;
+};
+
+export const DEFAULT_SETTINGS: DvGeneratorPluginSettings = {
+	generateEndingTagMetadata: false,
+};
+
 export default class DvGeneratorPlugin extends Plugin {
+	settings: DvGeneratorPluginSettings;
 	private previousSaveCommand: () => void;
 
 	runFileSync(file: TFile, editor: Editor) {
@@ -64,7 +58,9 @@ export default class DvGeneratorPlugin extends Plugin {
 			resultedText: newText,
 			remainingPromises,
 			errors,
-		} = getNewTextFromResults(data, results, sections);
+		} = getNewTextFromResults(data, results, sections, {
+			generateEndingTagMetadata: this.settings.generateEndingTagMetadata,
+		});
 
 		createNotice(
 			dedent`
@@ -91,12 +87,31 @@ export default class DvGeneratorPlugin extends Plugin {
 					const { resultedText } = getNewTextFromResults(
 						data,
 						[{ success: true, result }],
-						[section]
+						[section],
+						{
+							generateEndingTagMetadata:
+								this.settings.generateEndingTagMetadata,
+						}
 					);
 					writeFile(editor, data.text, resultedText);
 				})
 				.catch((e) => {
 					console.error(e);
+					const { resultedText } = getNewTextFromResults(
+						data,
+						[
+							{
+								success: false,
+								error: { message: e.message, cause: e },
+							},
+						],
+						[section],
+						{
+							generateEndingTagMetadata:
+								this.settings.generateEndingTagMetadata,
+						}
+					);
+					writeFile(editor, data.text, resultedText);
 					createNotice(
 						`Error when resolving run ${section.id}: ${e.message}`,
 						"red"
@@ -139,13 +154,26 @@ export default class DvGeneratorPlugin extends Plugin {
 	}
 
 	async onload() {
+		await this.loadSettings();
 		this.registerEventsAndSaveCallback();
+		this.addSettingTab(new SettingTab(this.app, this));
 	}
 
 	onunload() {
 		this.unregisterEventsAndSaveCallback();
 	}
 
+	async saveSettings() {
+		await this.saveData(this.settings);
+	}
+
+	async loadSettings() {
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			await this.loadData()
+		);
+	}
 	unregisterEventsAndSaveCallback() {
 		const saveCommandDefinition =
 			this.app.commands.commands["editor:save-file"];

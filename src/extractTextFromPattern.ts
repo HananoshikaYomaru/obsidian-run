@@ -1,9 +1,9 @@
 import { Prettify } from "./typings/prettify";
 import { mapStringToKeyValuePairs } from "./utils/strings";
 
-const startPattern = /%% dv-gen start\s*([\s\S]*?)%%/g;
+const startPattern = /%% run start\s*([\s\S]*?)%%/g;
 const codeBlockPattern = /```(ts|js)\n([\s\S]*?)\n```/;
-const endPattern = /%% dv-gen end\s*([\s\S]*?)%%/g;
+const endPattern = /%% run end\s*([\s\S]*?)%%/g;
 
 export const extractCode = (text: string) => {
 	const matches = new RegExp(codeBlockPattern).exec(text);
