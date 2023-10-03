@@ -1,10 +1,10 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import DvGeneratorPlugin from "../main";
+import RunPlugin from "../main";
 
 export class SettingTab extends PluginSettingTab {
-	plugin: DvGeneratorPlugin;
+	plugin: RunPlugin;
 
-	constructor(app: App, plugin: DvGeneratorPlugin) {
+	constructor(app: App, plugin: RunPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

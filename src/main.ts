@@ -19,25 +19,28 @@ function isFileIgnored(file: TFile, data?: Data) {
 	return false;
 }
 
-export type DvGeneratorPluginSettings = {
+export type RunPluginSettings = {
 	generateEndingTagMetadata: boolean;
 };
 
-export const DEFAULT_SETTINGS: DvGeneratorPluginSettings = {
+export const DEFAULT_SETTINGS: RunPluginSettings = {
 	generateEndingTagMetadata: false,
 };
 
-export default class DvGeneratorPlugin extends Plugin {
-	settings: DvGeneratorPluginSettings;
+export default class RunPlugin extends Plugin {
+	settings: RunPluginSettings;
 	private previousSaveCommand: () => void;
 
 	runFileSync(file: TFile, editor: Editor) {
 		const data = getDataFromTextSync(editor.getValue());
 		// recognise the patterns
 
-		const sections = extractSectionsFromPattern(data.text);
-		// eval all the expressions
+		const s = extractSectionsFromPattern(data.text);
 
+		// if no sections, we can return early
+		if (s.sections.length === 0) return;
+
+		// eval all the expressions
 		const context = {
 			file: {
 				...file,
@@ -46,7 +49,7 @@ export default class DvGeneratorPlugin extends Plugin {
 			dv: getAPI(this.app),
 		};
 
-		const results = sections.map(({ startingTag, codeBlock }) => {
+		const results = s.sections.map(({ startingTag, codeBlock }) => {
 			return evalFromExpression(
 				codeBlock ? codeBlock.code : startingTag,
 				codeBlock ? true : false,
@@ -58,20 +61,9 @@ export default class DvGeneratorPlugin extends Plugin {
 			resultedText: newText,
 			remainingPromises,
 			errors,
-		} = getNewTextFromResults(data, results, sections, {
+		} = getNewTextFromResults(data, results, s, {
 			generateEndingTagMetadata: this.settings.generateEndingTagMetadata,
 		});
-
-		createNotice(
-			dedent`
-		Completed: ${
-			results.length - errors.length - remainingPromises.length
-		} out of ${results.length}
-		Promise: ${remainingPromises.length}
-		Error: ${errors.length}
-		`,
-			errors.length > 0 ? "red" : "white"
-		);
 
 		// if new text, write File
 		if (newText !== data.text) {
@@ -87,7 +79,10 @@ export default class DvGeneratorPlugin extends Plugin {
 					const { resultedText } = getNewTextFromResults(
 						data,
 						[{ success: true, result }],
-						[section],
+						{
+							sections: [section],
+							sectionSummary: s.sectionSummary,
+						},
 						{
 							generateEndingTagMetadata:
 								this.settings.generateEndingTagMetadata,
@@ -105,7 +100,10 @@ export default class DvGeneratorPlugin extends Plugin {
 								error: { message: e.message, cause: e },
 							},
 						],
-						[section],
+						{
+							sections: [section],
+							sectionSummary: s.sectionSummary,
+						},
 						{
 							generateEndingTagMetadata:
 								this.settings.generateEndingTagMetadata,
@@ -118,6 +116,17 @@ export default class DvGeneratorPlugin extends Plugin {
 					);
 				});
 		});
+
+		createNotice(
+			dedent`
+		Completed: ${
+			results.length - errors.length - remainingPromises.length
+		} out of ${results.length}
+		Promise: ${remainingPromises.length}
+		Error: ${errors.length}
+		`,
+			errors.length > 0 ? "red" : "white"
+		);
 	}
 
 	registerEventsAndSaveCallback() {

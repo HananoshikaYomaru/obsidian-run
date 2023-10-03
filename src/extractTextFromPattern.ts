@@ -4,18 +4,20 @@ import { parseTextToAST } from "./utils/mdast";
 import { mapStringToKeyValuePairs } from "./utils/strings";
 
 const startPattern = /%% run start\s*([\s\S]*?)%%/g;
-const codeBlockPattern = /```(\s*)?(ts|js)(\s*)?\n([\s\S]*?)\n```/;
+const codeBlockPattern = /```([\s\S]*?)\n([\s\S]*?)\n```/;
 const endPattern = /%% run end\s*([\s\S]*?)%%/g;
 
 export const extractCode = (text: string) => {
 	const matches = new RegExp(codeBlockPattern).exec(text);
 	if (matches) {
-		const ast = parseTextToAST(matches[0]);
-		const code = ast.children.find((c) => c.type === "code")! as Code;
-		return {
-			languageCode: code.lang ?? "js",
-			code: code.value,
-		};
+		const ast = parseTextToAST(text);
+		const code = ast.children.find((c) => c.type === "code");
+		if (code?.type === "code")
+			return {
+				meta: code.meta,
+				languageCode: code.lang ?? "js",
+				code: code.value,
+			};
 	}
 	return undefined;
 };
@@ -104,14 +106,19 @@ export type Section = Prettify<
 // https://www.typescriptlang.org/play?target=99#code/FA4MwVwOwYwFwJYHsoAICmAPOAnAhvAMrrzJQDOAYjkgLYAKecc6OUAFC9gFyrm4IoAcwCUvAN584eHImEAVPEN78cgoQBpUMFCyhwVA4agA+qaABN0YQegtb0UC+sXKpa42cvXbF1AF8AbQBdVHFgVG0Ufj4SRGiJKRk5IVdDD00o-UcDd3VTcycfKDsHJxcldPyvIpsSvyDQgF5UEIBuEEidCjgk2UZmVjQWgHoAUjHUCwA3AFohRz64AB1yACp2QNXlwmC1gH4RCZGhDq7o3rwAGyuAWSYYAAt0clQmrjgAOloHx4BBG7sJYDFhsEQRLIxFgxFp-HD4ACenzANFoQOud1+L3BnVQYCQOFQQKu6F6CDeqAADKg2qhyQAeVDQr4k4RwR40ukAai5qBEYVQwAAkN0Yvxkvc4E8KczAghgsLRb0SthJdKWrLybyAIwKiHnHpLCpCCni2Rqx6BXWfARokQdfWQ3qOCwgoYU8aTGbzRYu1YbLbkHZ7Q7HU6Ol1utifK54fgASSKmFN0nNv0+gisyf2+ypqF5ZrgFsClOCMccQnZZ0iTowTgtFMjTFBUE+WBInCwcHtwpGI0hSBJMaQQiBTcG0djCaTqC0hYtGaTOJrdLARJdDYAhE0WlAIDdUAAyQ91iwLzNYVCMlVF377RdZ-nhUWD9DD0eni33i+YLQ389Jlo4IrgaMQusajb1r8Vplra7A9iBtbdHovQal2nzkFcCAwOg7DzumP41gWqa3lKlqluWbKPGUZ4EUuNpqHaDqIeQcRkOQnwAA4QOQjzsOEiGRIWxoaI6K7ITkvASfopg1FYdSlGJNbgQolSnhBJhycUdhKf4CE1v4GBXKxYRKX2qDxmu7KsOgdKvFASDqcY0iZLg6BMEyzxZChqB4E4Tkmi5vmvN4CkWEprGkNEXE8XxAmCcJqmaEpBoobwoW+KJgkBWkhTyb4un6ZE-gQiVuIQjgpIQGwsRRRQHRlcASpMl2FIAAbAAAxHgCAjAgPwLKg3UAEYjDAY3AAA7qw03TSAEyoAsJT4CwTJKK8haoBMXV4MNQ27WN+0IMAC1LawTC2S5rwultYzzV6cxLUst33VMj2LJtIAAMxcgALPdwAAOwnQ9PpoDdwBTr0ECcRYF28AATJSCNfbM2qUrMlLavICMI9wlIAKzcAjv2fAAnAjABsABaIOgK93pPZ9wA-f9dMg29YPPd9f0A8DC2M76-mQ3G0Ow-DqBIyjaMY1jON44TxOkxTNPswz71oJtNgksAXEyDkER6+yL3AB1TUXKglXkPuqEYNg+BEGx0TUHQUYcC12D8ubFCvu+7BWzbWgB1cLIVsbOLNeQeC0JxJIAEovDbFKBMKkjCkKiWpEoqC8AARKzueiUKIq6DkOeoLngO57OgrFypWduLnUPmOLLCI8jqPo5j2O4-jRMk+TVPU7nwr+EXafF5nrjl-nf3V1o6fSb06W1L4Nfp-X08r-l9Tr0KY+1xPGckRBecF0XJfZDJedV3vQqb2pTeiy3cNt5LHcy938t90rg80yP+8tBHyno-bW6Blitk4vrfQEDUBG0eIXWul80p5W0n4BeddyhJW3mg2uJUFRAA
 export function extractSectionsFromPattern(text: string) {
 	const sections: Section[] = [];
+	const sectionSummary: {
+		[startingTag: string]: number;
+	} = {};
 	const allMatches = Array.from(text.matchAll(new RegExp(startPattern)));
 
 	for (let i = 0; i < allMatches.length; i++) {
 		const startMatch = allMatches[i]!;
 		const nextMatch = allMatches[i + 1];
-		const { id, text: startingTag } = extractId(
-			startMatch[1]?.trim() ?? ""
-		);
+		const { text: startingTag } = extractId(startMatch[1]?.trim() ?? "");
+
+		// if there is the same starting tag, id will be updated
+		const id = (sectionSummary[startingTag] =
+			(sectionSummary[startingTag] ?? 0) + 1);
 
 		const codeBlock = extractCode(startingTag);
 
@@ -132,7 +139,7 @@ export function extractSectionsFromPattern(text: string) {
 
 			sections.push({
 				startingTag,
-				id: i,
+				id,
 				codeBlock,
 				content: content,
 				endingTag: endingTag,
@@ -147,7 +154,7 @@ export function extractSectionsFromPattern(text: string) {
 		} else {
 			// If there is no ending tag, treat the content and ending tag as undefined
 			sections.push({
-				id: i,
+				id,
 				startingTag,
 				startMatch,
 				codeBlock,
@@ -158,5 +165,9 @@ export function extractSectionsFromPattern(text: string) {
 			});
 		}
 	}
-	return sections;
+	return { sections, sectionSummary };
 }
+
+export type extractSectionsResult = ReturnType<
+	typeof extractSectionsFromPattern
+>;

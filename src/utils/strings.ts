@@ -471,3 +471,25 @@ export function mapStringToKeyValuePairs(inputString: string) {
 
 	return result;
 }
+
+export const replaceOccurance = (
+	text: string,
+	search: string,
+	replace: string,
+	index: number
+) => {
+	const parts = text.split(search);
+
+	console.log({ text, parts });
+
+	if (parts.length <= index) {
+		return text; // No match found or index out of range, return original text
+	}
+
+	let result = parts[0]!;
+
+	for (let i = 1; i < parts.length; i++) {
+		result += (i === index ? replace : search) + parts[i];
+	}
+	return result;
+};

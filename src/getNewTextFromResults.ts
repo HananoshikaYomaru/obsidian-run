@@ -1,8 +1,12 @@
 import { Data } from "./utils/obsidian";
-import { Section } from "./extractTextFromPattern";
+import { Section, extractSectionsResult } from "./extractTextFromPattern";
 import { EvalResult, Primitive } from "./utils/evalFromExpression";
 import dedent from "ts-dedent";
 import { format } from "date-fns";
+import {
+	replaceOccurance,
+	replaceTextBetweenStartAndEndWithNewValue,
+} from "./utils/strings";
 
 const getEndingTag = (
 	generateEndingTagMetadata: boolean,
@@ -12,24 +16,27 @@ const getEndingTag = (
 	if (errorMessage)
 		return dedent(
 			generateEndingTagMetadata
-				? `%% run end
-	${_getEndingTag("endingTag" in section ? section.endingObject : {}, {
-		error: errorMessage,
-	})}
-	%%`
+				? dedent`
+				%% run end
+				${_getEndingTag("endingTag" in section ? section.endingObject : {}, {
+					error: errorMessage,
+				})}
+				%%
+				`
 				: `%% run end %%`
 		);
 
 	return dedent(
 		generateEndingTagMetadata
-			? `%% run end 
-	${_getEndingTag(
-		{},
-		{
-			"last update": format(new Date(), "yyyy-MM-dd HH:mm:ss"),
-		}
-	)}
-	%%`
+			? dedent`
+			%% run end 
+			${_getEndingTag(
+				{},
+				{
+					"last update": format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+				}
+			)}
+			%%`
 			: `%% run end %%`
 	);
 };
@@ -53,7 +60,7 @@ const _getEndingTag = (
 export function getNewTextFromResults(
 	data: Data,
 	results: EvalResult[],
-	sections: Section[],
+	s: extractSectionsResult,
 	options?: {
 		generateEndingTagMetadata?: boolean;
 	}
@@ -68,21 +75,32 @@ export function getNewTextFromResults(
 
 	for (let i = 0; i < results.length; i++) {
 		const result = results[i]!;
-		const section = sections[i]!;
+		const section = s.sections[i]!;
 		// for each success result, remove all the texts to corresponding end tag and replace it with the result
 		if (result.success) {
 			const content =
 				result.result instanceof Promise ? "Loading..." : result.result;
 
 			const newSectionText = dedent`
-			%% run start ${section.id}
+			%% run start
 			${section.startingTag} 
 			%%
 			${content}
 			${getEndingTag(Boolean(options?.generateEndingTagMetadata), section)}
 			`;
 
-			resultedText = resultedText.replace(section.text, newSectionText);
+			resultedText = replaceOccurance(
+				resultedText,
+				section.text,
+				newSectionText,
+				section.id
+			);
+
+			console.log({
+				old: section.text,
+				new: newSectionText,
+				resultedText,
+			});
 			if (result.result instanceof Promise) {
 				remainingPromises.push({
 					section: {
@@ -98,7 +116,7 @@ export function getNewTextFromResults(
 		else {
 			console.error(result.error.message);
 			const newSectionText = dedent`
-			%% run start ${section.id}
+			%% run start
 			${section.startingTag}
 			%%
 			${"content" in section ? section.content : ""}
@@ -108,7 +126,12 @@ export function getNewTextFromResults(
 				result.error.message
 			)}
 			`;
-			resultedText = resultedText.replace(section.text, newSectionText);
+			resultedText = replaceOccurance(
+				resultedText,
+				section.text,
+				newSectionText,
+				section.id
+			);
 			errors.push({
 				section,
 				message: result.error.message,
