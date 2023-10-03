@@ -4,6 +4,8 @@ Generate markdown from dataview query and javascript.
 
 ✅ Powerful, Dead Simple
 
+demo: https://www.youtube.com/watch?v=_UAr6e6hlVI&t=71s
+
 ## Installation
 
 ### Plugin marketplace
