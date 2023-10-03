@@ -96,11 +96,6 @@ export function getNewTextFromResults(
 				section.id
 			);
 
-			console.log({
-				old: section.text,
-				new: newSectionText,
-				resultedText,
-			});
 			if (result.result instanceof Promise) {
 				remainingPromises.push({
 					section: {

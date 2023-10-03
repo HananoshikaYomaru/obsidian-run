@@ -480,8 +480,6 @@ export const replaceOccurance = (
 ) => {
 	const parts = text.split(search);
 
-	console.log({ text, parts });
-
 	if (parts.length <= index) {
 		return text; // No match found or index out of range, return original text
 	}
