@@ -36,12 +36,12 @@ export function evalFromExpression(
 			result: Primitive | Promise<Primitive>;
 	  } {
 	try {
-		console.log(parse);
 		const ast = parse(expression, {
 			parser: require("recast/parsers/babel"),
 		});
+
 		const func = new (
-			JSON.stringify(ast.program.body[0])?.includes("AwaitExpression")
+			JSON.stringify(ast.program.body)?.includes("AwaitExpression")
 				? AsyncFunction
 				: Function
 		)(
