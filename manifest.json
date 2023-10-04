@@ -1,7 +1,7 @@
 {
 	"id": "run",
 	"name": "Run",
-	"version": "1.0.1",
+	"version": "1.0.3",
 	"minAppVersion": "0.15.0",
 	"description": "Generate markdown from dataview query and javascript",
 	"author": "Hananoshika Yomaru",
