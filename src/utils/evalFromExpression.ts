@@ -1,5 +1,9 @@
 import dedent from "ts-dedent";
+import { parse } from "recast";
 import { z } from "zod";
+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/AsyncFunction
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
 const primativeSchema = z
 	.string()
@@ -32,7 +36,15 @@ export function evalFromExpression(
 			result: Primitive | Promise<Primitive>;
 	  } {
 	try {
-		const func = new Function(
+		console.log(parse);
+		const ast = parse(expression, {
+			parser: require("recast/parsers/babel"),
+		});
+		const func = new (
+			JSON.stringify(ast.program.body[0])?.includes("AwaitExpression")
+				? AsyncFunction
+				: Function
+		)(
 			...Object.keys(context).sort(),
 			dedent(!isFunctionBody ? `return ${expression}` : expression)
 		);

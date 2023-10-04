@@ -3,10 +3,7 @@ import { Section, extractSectionsResult } from "./extractTextFromPattern";
 import { EvalResult, Primitive } from "./utils/evalFromExpression";
 import dedent from "ts-dedent";
 import { format } from "date-fns";
-import {
-	replaceOccurance,
-	replaceTextBetweenStartAndEndWithNewValue,
-} from "./utils/strings";
+import { replaceOccurance } from "./utils/strings";
 
 const getEndingTag = (
 	generateEndingTagMetadata: boolean,

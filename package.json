@@ -34,6 +34,7 @@
 		"typescript": "^5.0.5"
 	},
 	"dependencies": {
+		"@babel/parser": "^7.23.0",
 		"@total-typescript/ts-reset": "^0.5.1",
 		"date-fns": "^2.30.0",
 		"diff-match-patch": "^1.0.5",
@@ -48,6 +49,7 @@
 		"micromark-util-combine-extensions": "^1.0.0",
 		"obsidian-dataview": "^0.5.59",
 		"quick-lru": "^6.1.1",
+		"recast": "^0.23.4",
 		"ts-dedent": "^2.2.0",
 		"unist-util-visit": "^4.1.2",
 		"zod": "^3.22.2"
