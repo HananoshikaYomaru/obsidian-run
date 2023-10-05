@@ -7,6 +7,7 @@ import { getNewTextFromResults } from "./getNewTextFromResults";
 import dedent from "ts-dedent";
 import { createNotice } from "./createNotice";
 import { SettingTab } from "./ui/settingsTab";
+import { Templater } from "./typings/templater";
 
 enum YamlKey {
 	IGNORE = "run-ignore",
@@ -29,7 +30,7 @@ export const DEFAULT_SETTINGS: RunPluginSettings = {
 
 export default class RunPlugin extends Plugin {
 	settings: RunPluginSettings;
-	private previousSaveCommand: () => void;
+	private previousSaveCommand: (() => void) | undefined;
 
 	runFileSync(file: TFile, editor: Editor) {
 		const data = getDataFromTextSync(editor.getValue());
@@ -47,6 +48,11 @@ export default class RunPlugin extends Plugin {
 				properties: data.yamlObj,
 			},
 			dv: getAPI(this.app),
+			tp: (
+				this.app.plugins.plugins["templater-obsidian"] as Plugin & {
+					templater: Templater;
+				}
+			)?.templater.current_functions_object,
 		};
 
 		const results = s.sections.map(({ startingTag, codeBlock }) => {
@@ -131,7 +137,7 @@ export default class RunPlugin extends Plugin {
 
 	registerEventsAndSaveCallback() {
 		const saveCommandDefinition =
-			this.app.commands.commands["editor:save-file"];
+			this.app.commands.commands["editor:save-file"]!;
 		this.previousSaveCommand = saveCommandDefinition.callback;
 
 		if (typeof this.previousSaveCommand === "function") {
@@ -150,7 +156,7 @@ export default class RunPlugin extends Plugin {
 				this.runFileSync(file, editor);
 
 				// run the previous save command
-				this.previousSaveCommand();
+				if (this.previousSaveCommand) this.previousSaveCommand();
 
 				// defines the vim command for saving a file and lets the linter run on save for it
 				// accounts for https://github.com/platers/obsidian-linter/issues/19
@@ -185,7 +191,7 @@ export default class RunPlugin extends Plugin {
 	}
 	unregisterEventsAndSaveCallback() {
 		const saveCommandDefinition =
-			this.app.commands.commands["editor:save-file"];
+			this.app.commands.commands["editor:save-file"]!;
 		saveCommandDefinition.callback = this.previousSaveCommand;
 	}
 }
