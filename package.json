@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-run",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"description": "Generate markdown from dataview query and javascript",
 	"main": "main.js",
 	"scripts": {

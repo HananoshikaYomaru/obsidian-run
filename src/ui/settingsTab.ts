@@ -26,5 +26,26 @@ export class SettingTab extends PluginSettingTab {
 					});
 				return toggle;
 			});
+
+		new Setting(containerEl)
+			.setName("Ignore folders")
+			.setDesc("Folders to ignore. One folder per line.")
+			.addTextArea((text) => {
+				text.setPlaceholder("Enter folders to ignore")
+					.setValue(this.plugin.settings.ignoredFolders.join("\n"))
+					.onChange(async (_value) => {
+						const folders = _value
+							.trim()
+							.split("\n")
+							.filter((p) => p !== "");
+
+						this.plugin.settings.ignoredFolders = folders;
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.style.minWidth = text.inputEl.style.maxWidth =
+					"300px";
+				text.inputEl.style.minHeight = "200px";
+				return text;
+			});
 	}
 }

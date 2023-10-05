@@ -13,7 +13,12 @@ enum YamlKey {
 	IGNORE = "run-ignore",
 }
 
-function isFileIgnored(file: TFile, data?: Data) {
+const isIgnoredByFolder = (settings: RunPluginSettings, file: TFile) => {
+	return settings.ignoredFolders.includes(file.parent?.path as string);
+};
+
+function isFileIgnored(settings: RunPluginSettings, file: TFile, data?: Data) {
+	if (isIgnoredByFolder(settings, file)) return true;
 	if (data) {
 		if (data.yamlObj && data.yamlObj[YamlKey.IGNORE]) return true;
 	}
@@ -22,10 +27,12 @@ function isFileIgnored(file: TFile, data?: Data) {
 
 export type RunPluginSettings = {
 	generateEndingTagMetadata: boolean;
+	ignoredFolders: string[];
 };
 
 export const DEFAULT_SETTINGS: RunPluginSettings = {
 	generateEndingTagMetadata: false,
+	ignoredFolders: [],
 };
 
 export default class RunPlugin extends Plugin {
@@ -150,7 +157,7 @@ export default class RunPlugin extends Plugin {
 				const file = this.app.workspace.getActiveFile();
 				if (!editor || !file) return;
 				const data = getDataFromTextSync(editor.getValue());
-				if (isFileIgnored(file, data)) return;
+				if (isFileIgnored(this.settings, file, data)) return;
 
 				// this cannot be awaited because it will cause the editor to delay saving
 				this.runFileSync(file, editor);

@@ -3,6 +3,8 @@
 Generate markdown from dataview query and javascript.
 
 ✅ Powerful, Dead Simple
+✅ Markdown based, work with every markdown editor / render
+✅ Works well with Dataview, Templater, Obsidian publish
 
 demo: https://www.youtube.com/watch?v=_UAr6e6hlVI&t=71s
 
@@ -78,6 +80,11 @@ ending tag closes the run block.
 %% run end <metadata> %%
 ```
 
+## Options
+
+1. generate ending tag metadata: when enabled, the run block update time and error(if any) will be shown in the ending tag.
+2. ignore folders: the folder listed will be ignored by this plugin
+
 ## Advanced Usage
 
 ### Access file object
@@ -112,22 +119,44 @@ return dv.markdownList(dv.pages("#ai/image").map((page) => page.file.link));
 %%
 ````
 
+### Templater and Reusable user scripts
+
+you can access the `tp` object if you have templater plugin installed and enabled.
+
+![](https://share.cleanshot.com/qwTYFCby+)
+
+Templater allows user to have their user defined functions and scripts. To learn more, checkout https://silentvoid13.github.io/Templater/user-functions/script-user-functions.html.
+
 ### Function
 
 you can write complicated function in starting tag codeblock
 
 ### Async Function
 
-You can use the obsidian [request](https://docs.obsidian.md/Reference/TypeScript+API/request) function to fetch data.
+You can do any kind of async operation in the run block. Async function is non-blocking. Results will be resolved after all sync operation are resolved. You can use the obsidian [request](https://docs.obsidian.md/Reference/TypeScript+API/request) function to fetch data.
+
+![](https://share.cleanshot.com/83hQltDB+)
 
 ### Debug
 
-you can use `console.log` in the starting tag codeblock.
+you can use `console.log` in the starting tag codeblock. It will output in the developer tool.
 
 ## Note
 
 1. if you want to contribute, please star and open github issue.
 2. this plugin is powerful, but it is still under early development. The syntax is subject to change but will be backward compatible as much as possible
+3. you will want to use this with [CodeblockCustomizer](https://github.com/mugiwara85/CodeblockCustomizer) to collapse your code block.
+4. you will want to save the following codeblock as template so that you can use it easily.
+
+````md
+%% run start
+
+```ts fold
+return;
+```
+
+%%
+````
 
 ## Support
 
