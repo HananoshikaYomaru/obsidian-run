@@ -121,7 +121,9 @@ return dv.markdownList(dv.pages("#ai/image").map((page) => page.file.link));
 
 ### Templater and Reusable user scripts
 
-you can access the `tp` object if you have templater plugin installed and enabled.
+you can access the `tp` object if you have templater plugin installed and enabled. 
+
+> Then you need to go to the setting of template and manually set a startup template. The reason of doing this is that `tp` is not initialized by default by templater and it will be undefined. Learn more and see a video: https://github.com/HananoshikaYomaru/obsidian-run/issues/14#issuecomment-1749945619. If you don't want to set a start up template, you can manually run templater once everytime you start up obsidian. As long as templater runs once, the `tp` object will be defined. 
 
 ![](https://share.cleanshot.com/qwTYFCby+)
 
