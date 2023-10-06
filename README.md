@@ -2,9 +2,9 @@
 
 Generate markdown from dataview query and javascript.
 
-✅ Powerful, Dead Simple
-✅ Markdown based, work with every markdown editor / render
-✅ Works well with Dataview, Templater, Obsidian publish
+- ✅ Powerful, Dead Simple
+- ✅ Markdown based, work with every markdown editor / render
+- ✅ Works well with Dataview, Templater, Obsidian publish
 
 demo: https://www.youtube.com/watch?v=_UAr6e6hlVI&t=71s
 
