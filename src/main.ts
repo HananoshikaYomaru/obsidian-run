@@ -9,6 +9,8 @@ import { createNotice } from "./createNotice";
 import { SettingTab } from "./ui/settingsTab";
 import { Templater } from "./typings/templater";
 
+import {} from "obsidian/publish";
+
 enum YamlKey {
 	IGNORE = "run-ignore",
 }
@@ -56,9 +58,11 @@ export default class RunPlugin extends Plugin {
 			},
 			dv: getAPI(this.app),
 			tp: (
-				this.app.plugins.plugins["templater-obsidian"] as Plugin & {
-					templater: Templater;
-				}
+				this.app.plugins.plugins["templater-obsidian"] as
+					| (Plugin & {
+							templater: Templater;
+					  })
+					| undefined
 			)?.templater.current_functions_object,
 		};
 
@@ -147,32 +151,30 @@ export default class RunPlugin extends Plugin {
 			this.app.commands.commands["editor:save-file"]!;
 		this.previousSaveCommand = saveCommandDefinition.callback;
 
-		if (typeof this.previousSaveCommand === "function") {
-			saveCommandDefinition.callback = () => {
-				// get the editor and file
-				const editor =
-					this.app.workspace.getActiveViewOfType(
-						MarkdownView
-					)?.editor;
-				const file = this.app.workspace.getActiveFile();
-				if (!editor || !file) return;
-				const data = getDataFromTextSync(editor.getValue());
-				if (isFileIgnored(this.settings, file, data)) return;
+		saveCommandDefinition.callback = () => {
+			// get the editor and file
+			const editor =
+				this.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
+			const file = this.app.workspace.getActiveFile();
+			if (!editor || !file) return;
+			const data = getDataFromTextSync(editor.getValue());
+			if (isFileIgnored(this.settings, file, data)) return;
 
-				// this cannot be awaited because it will cause the editor to delay saving
-				this.runFileSync(file, editor);
+			// this cannot be awaited because it will cause the editor to delay saving
+			this.runFileSync(file, editor);
 
-				// run the previous save command
+			// run the previous save command
+			if (typeof this.previousSaveCommand === "function") {
 				if (this.previousSaveCommand) this.previousSaveCommand();
+			}
 
-				// defines the vim command for saving a file and lets the linter run on save for it
-				// accounts for https://github.com/platers/obsidian-linter/issues/19
-				const that = this;
-				window.CodeMirrorAdapter.commands.save = () => {
-					that.app.commands.executeCommandById("editor:save-file");
-				};
+			// defines the vim command for saving a file and lets the linter run on save for it
+			// accounts for https://github.com/platers/obsidian-linter/issues/19
+			const that = this;
+			window.CodeMirrorAdapter.commands.save = () => {
+				that.app.commands.executeCommandById("editor:save-file");
 			};
-		}
+		};
 	}
 
 	async onload() {

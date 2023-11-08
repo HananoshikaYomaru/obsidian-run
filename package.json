@@ -7,7 +7,8 @@
 		"dev": "bun esbuild.config.mjs",
 		"build": "bun esbuild.config.mjs production",
 		"version": "bun version-bump.mjs && git add manifest.json versions.json",
-		"prepare": "husky install"
+		"prepare": "husky install",
+		"release": "bash ./release.sh"
 	},
 	"keywords": [
 		"obsidian",
