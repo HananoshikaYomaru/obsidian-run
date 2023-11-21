@@ -1,6 +1,11 @@
 import { Editor, MarkdownView, Plugin, TFile } from "obsidian";
 import { getAPI } from "obsidian-dataview";
-import { Data, getDataFromTextSync, writeFile } from "./utils/obsidian";
+import {
+	Data,
+	getDataFromTextSync,
+	isMarkdownFile,
+	writeFile,
+} from "./utils/obsidian";
 import { extractSectionsFromPattern } from "./extractTextFromPattern";
 import { evalFromExpression } from "./utils/evalFromExpression";
 import { getNewTextFromResults } from "./getNewTextFromResults";
@@ -8,8 +13,6 @@ import dedent from "ts-dedent";
 import { createNotice } from "./createNotice";
 import { SettingTab } from "./ui/settingsTab";
 import { Templater } from "./typings/templater";
-
-import {} from "obsidian/publish";
 
 enum YamlKey {
 	IGNORE = "run-ignore",
@@ -39,7 +42,6 @@ export const DEFAULT_SETTINGS: RunPluginSettings = {
 
 export default class RunPlugin extends Plugin {
 	settings: RunPluginSettings;
-	private previousSaveCommand: (() => void) | undefined;
 
 	runFileSync(file: TFile, editor: Editor) {
 		const data = getDataFromTextSync(editor.getValue());
@@ -146,45 +148,27 @@ export default class RunPlugin extends Plugin {
 		);
 	}
 
-	registerEventsAndSaveCallback() {
-		const saveCommandDefinition =
-			this.app.commands.commands["editor:save-file"]!;
-		this.previousSaveCommand = saveCommandDefinition.callback;
-
-		saveCommandDefinition.callback = () => {
-			// get the editor and file
-			const editor =
-				this.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
-			const file = this.app.workspace.getActiveFile();
-			if (!editor || !file) return;
-			const data = getDataFromTextSync(editor.getValue());
-			if (isFileIgnored(this.settings, file, data)) return;
-
-			// this cannot be awaited because it will cause the editor to delay saving
-			this.runFileSync(file, editor);
-
-			// run the previous save command
-			if (typeof this.previousSaveCommand === "function") {
-				if (this.previousSaveCommand) this.previousSaveCommand();
-			}
-
-			// defines the vim command for saving a file and lets the linter run on save for it
-			// accounts for https://github.com/platers/obsidian-linter/issues/19
-			const that = this;
-			window.CodeMirrorAdapter.commands.save = () => {
-				that.app.commands.executeCommandById("editor:save-file");
-			};
-		};
-	}
-
 	async onload() {
 		await this.loadSettings();
-		this.registerEventsAndSaveCallback();
+		// this.registerEventsAndSaveCallback();
+		this.addCommand({
+			id: "run-file",
+			name: "Run file",
+			editorCheckCallback: this.runFile.bind(this),
+		});
+
 		this.addSettingTab(new SettingTab(this.app, this));
 	}
 
-	onunload() {
-		this.unregisterEventsAndSaveCallback();
+	runFile(checking: boolean, editor: Editor, ctx: MarkdownView) {
+		if (!ctx.file) return;
+		if (checking) {
+			return isMarkdownFile(ctx.file);
+		}
+		if (!editor) return;
+		const data = getDataFromTextSync(editor.getValue());
+		if (isFileIgnored(this.settings, ctx.file, data)) return;
+		this.runFileSync(ctx.file, editor);
 	}
 
 	async saveSettings() {
@@ -197,10 +181,5 @@ export default class RunPlugin extends Plugin {
 			DEFAULT_SETTINGS,
 			await this.loadData()
 		);
-	}
-	unregisterEventsAndSaveCallback() {
-		const saveCommandDefinition =
-			this.app.commands.commands["editor:save-file"]!;
-		saveCommandDefinition.callback = this.previousSaveCommand;
 	}
 }

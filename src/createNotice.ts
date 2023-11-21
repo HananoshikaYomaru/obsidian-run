@@ -8,8 +8,8 @@ export function createNotice(
 ) {
 	const fragment = new DocumentFragment();
 	const desc = document.createElement("div");
-	desc.innerHTML = dedent`Obsidian Run: 
-    ${message}`;
+	desc.setText(dedent`Obsidian Run: 
+    ${message}`);
 	desc.style.color = color;
 	fragment.appendChild(desc);
 

@@ -6,13 +6,13 @@ Generate markdown from dataview query and javascript.
 - ✅ Markdown based, work with every markdown editor / render
 - ✅ Works well with Dataview, Templater, Obsidian publish
 
-demo: https://www.youtube.com/watch?v=_UAr6e6hlVI&t=71s
+demo: <https://www.youtube.com/watch?v=_UAr6e6hlVI&t=71s>
 
 ## Installation
 
 ### Plugin marketplace
 
-⏳ Waiting for approval: https://github.com/obsidianmd/obsidian-releases/pull/2513
+⏳ Waiting for approval: <https://github.com/obsidianmd/obsidian-releases/pull/2513>
 
 ### Manual Installation
 
@@ -23,7 +23,9 @@ demo: https://www.youtube.com/watch?v=_UAr6e6hlVI&t=71s
 
 ## Usage
 
-1. define a starting tag
+1. install this plugin and install [obsidian-custom-save](https://github.com/HananoshikaYomaru/obsidian-custom-save)
+2. add the `run: run file` command to the custom save actions
+3. define a starting tag
 
 ```md
 %% run start 3+4%%
@@ -121,13 +123,13 @@ return dv.markdownList(dv.pages("#ai/image").map((page) => page.file.link));
 
 ### Templater and Reusable user scripts
 
-you can access the `tp` object if you have templater plugin installed and enabled. 
+you can access the `tp` object if you have templater plugin installed and enabled.
 
-> Then you need to go to the setting of template and manually set a startup template. The reason of doing this is that `tp` is not initialized by default by templater and it will be undefined. Learn more and see a video: https://github.com/HananoshikaYomaru/obsidian-run/issues/14#issuecomment-1749945619. If you don't want to set a start up template, you can manually run templater once everytime you start up obsidian. As long as templater runs once, the `tp` object will be defined. 
+> Then you need to go to the setting of template and manually set a startup template. The reason of doing this is that `tp` is not initialized by default by templater and it will be undefined. Learn more and see a video: <https://github.com/HananoshikaYomaru/obsidian-run/issues/14#issuecomment-1749945619>. If you don't want to set a start up template, you can manually run templater once everytime you start up obsidian. As long as templater runs once, the `tp` object will be defined.
 
 ![](https://share.cleanshot.com/qwTYFCby+)
 
-Templater allows user to have their user defined functions and scripts. To learn more, checkout https://silentvoid13.github.io/Templater/user-functions/script-user-functions.html.
+Templater allows user to have their user defined functions and scripts. To learn more, checkout <https://silentvoid13.github.io/Templater/user-functions/script-user-functions.html>.
 
 ### Function
 
@@ -162,6 +164,6 @@ return;
 
 ## Support
 
-If you are enjoying this plugin then please support my work and enthusiasm by buying me a coffee on https://www.buymeacoffee.com/yomaru.
+If you are enjoying this plugin then please support my work and enthusiasm by buying me a coffee on <https://www.buymeacoffee.com/yomaru>.
 
 <a href="https://www.buymeacoffee.com/yomaru" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
