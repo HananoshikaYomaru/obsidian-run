@@ -12,7 +12,7 @@ demo: <https://www.youtube.com/watch?v=_UAr6e6hlVI&t=71s>
 
 ### Plugin marketplace
 
-⏳ Waiting for approval: <https://github.com/obsidianmd/obsidian-releases/pull/2513>
+You can download this from obsidian plugin store. 
 
 ### Manual Installation
 
